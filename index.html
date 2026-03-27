@@ -1,280 +1,125 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoWall 3x3 | Private Viewer</title>
-    <style>
-        :root {
-            --bg-color: #0a0a0a;
-            --card-bg: #141414;
-            --accent: #00ff88;
-            --text: #e0e0e0;
-        }
-
-        body {
-            background-color: var(--bg-color); /* Исправил white на темный фон для стиля */
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .header { margin: 20px 0; text-align: center; }
-        .header h1 { color: var(--accent); letter-spacing: 3px; margin-bottom: 5px; }
-        .header a { color: var(--accent); text-decoration: none; font-size: 14px; opacity: 0.7; }
-        .header a:hover { opacity: 1; }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            width: 98vw;
-            height: 80vh;
-            max-width: 1600px;
-        }
-
-        .video-slot {
-            background: var(--card-bg);
-            border: 1px solid #222;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .add-btn {
-            background: none; border: 1px solid var(--accent);
-            color: var(--accent); font-size: 30px;
-            width: 60px; height: 60px; border-radius: 50%;
-            cursor: pointer; transition: 0.3s;
-        }
-
-        .add-btn:hover { background: var(--accent); color: black; }
-
-        iframe { width: 100%; height: 100%; border: none; }
-
-        /* Контейнер кнопок управления */
-        .controls {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            display: flex;
-            gap: 5px;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .video-slot:hover .controls { opacity: 1; }
-
-        .ctrl-btn {
-            border: none;
-            cursor: pointer;
-            padding: 5px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: white;
-            font-weight: bold;
-        }
-
-        .remove-btn { background: rgba(220, 53, 69, 0.8); }
-        .change-btn { background: rgba(0, 123, 255, 0.8); }
-        .ctrl-btn:hover { transform: scale(1.05); }
-
-        .footer-legal {
-            margin-top: 40px;
-            padding: 20px;
-            max-width: 900px;
-            font-size: 13px;
-            color: #555;
-            border-top: 1px solid #222;
-            line-height: 1.6;
-            text-align: center;
-        }
-
-        .legal-tag { color: var(--accent); font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<title>YouTube Grid 3x3</title>
+<style>
+    body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: Arial;
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+        padding: 5px;
+    }
+    .cell {
+        position: relative;
+        background: #000;
+        aspect-ratio: 16/9;
+    }
+    iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    .controls {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: flex;
+        gap: 5px;
+    }
+    button {
+        background: rgba(0,0,0,0.7);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 5px;
+        font-size: 16px;
+    }
+    button:hover {
+        background: rgba(255,255,255,0.2);
+    }
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1><a href="https://web3my.netlify.app">MY WEB3</a></h1>
-        <h1>VIEWER 3x3</h1>
-        <p>Индивидуальная настройка мульти-потока</p>
-    </div>
 
-    <div class="grid-container" id="grid"></div>
+<div class="grid" id="grid"></div>
 
-    <footer class="footer-legal">
-        <p><span class="legal-tag">Правовой статус:</span> Данный ресурс является инструментом визуализации и работает на основе стандартного API встраивания. На текущий момент (2026 г.) использование данного функционала соответствует Fair Use.</p>
-        <p><span class="legal-tag">Политика конфиденциальности:</span> Данные хранятся локально в вашем браузере (LocalStorage).</p>
-    </footer>
+<script>
+const grid = document.getElementById('grid');
 
-    <script>
-        const grid = document.getElementById('grid');
-        let savedVideos = JSON.parse(localStorage.getItem('multiview-data')) || {};
+// создаём 9 ячеек
+for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
 
-        // Вспомогательная функция для получения ID видео
-        function getVideoId(url) {
-            const regex = /(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=))([\w\-]{11})/;
-            const match = url.match(regex);
-            return match ? match[1] : null;
-        }
+    const controls = document.createElement('div');
+    controls.className = 'controls';
 
-        function render() {
-            grid.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'video-slot';
-                
-                if (savedVideos[i]) {
-                    slot.innerHTML = `
-                        <div class="controls">
-                            <button class="ctrl-btn change-btn" onclick="add(${i})" title="Сменить видео">🔄</button>
-                            <button class="ctrl-btn remove-btn" onclick="remove(${i})" title="Удалить">✕</button>
-                        </div>
-                        <iframe src="https://www.youtube.com/embed/${savedVideos[i]}" allowfullscreen></iframe>
-                    `;
-                } else {
-                    slot.innerHTML = `<button class="add-btn" onclick="add(${i})">+</button>`;
-                }
-                grid.appendChild(slot);
-            }
-        }
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '➕';
 
-        window.add = (i) => {
-            const currentVideo = savedVideos[i] ? ` (сейчас: ${savedVideos[i]})` : "";
-            const url = prompt("Вставьте новую ссылку на YouTube" + currentVideo + ":");
-            if (!url) return;
-            
-            const id = getVideoId(url);
-            if (id) {
-                savedVideos[i] = id[1] || id; // Берем ID
-                localStorage.setItem('multiview-data', JSON.stringify(savedVideos));
-                render();
+    const replaceBtn = document.createElement('button');
+    replaceBtn.textContent = '🔄';
+
+    controls.appendChild(addBtn);
+    controls.appendChild(replaceBtn);
+
+    cell.appendChild(controls);
+
+    let iframe = null;
+
+    function getEmbed(url) {
+        try {
+            const u = new URL(url);
+            let id = '';
+
+            if (u.hostname.includes('youtu.be')) {
+                id = u.pathname.slice(1);
             } else {
-                alert("Неверная ссылка на YouTube");
+                id = u.searchParams.get('v');
             }
-        };
 
-        window.remove = (i) => {
-            if(confirm("Удалить это видео?")) {
-                delete savedVideos[i];
-                localStorage.setItem('multiview-data', JSON.stringify(savedVideos));
-                render();
-            }
-        };
+            return `https://www.youtube.com/embed/${id}?autoplay=1`;
+        } catch {
+            return null;
+        }
+    }
 
-        render();
-    </script>
+    function setVideo() {
+        const url = prompt("Вставь YouTube URL:");
+        if (!url) return;
+
+        const embed = getEmbed(url);
+        if (!embed) {
+            alert("Неверная ссылка");
+            return;
+        }
+
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            cell.appendChild(iframe);
+        }
+
+        iframe.src = embed;
+    }
+
+    addBtn.onclick = () => {
+        if (!iframe) setVideo();
+    };
+
+    replaceBtn.onclick = () => {
+        setVideo();
+    };
+
+    grid.appendChild(cell);
+}
+</script>
+
 </body>
 </html>
-
-        .video-slot {
-            background: var(--card-bg);
-            border: 1px solid #222;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .add-btn {
-            background: none; border: 1px solid var(--accent);
-            color: var(--accent); font-size: 30px;
-            width: 60px; height: 60px; border-radius: 50%;
-            cursor: pointer; transition: 0.3s;
-        }
-
-        .add-btn:hover { background: var(--accent); color: black; }
-
-        iframe { width: 100%; height: 100%; border: none; }
-
-        .remove-btn {
-            position: absolute; top: 10px; right: 10px;
-            background: rgba(255,0,0,0.5); color: white;
-            border: none; cursor: pointer; padding: 5px 10px;
-            z-index: 10; display: none;
-        }
-
-        .video-slot:hover .remove-btn { display: block; }
-
-        /* Секция политик */
-        .footer-legal {
-            margin-top: 40px;
-            padding: 20px;
-            max-width: 900px;
-            font-size: 13px;
-            color: #555;
-            border-top: 1px solid #222;
-            line-height: 1.6;
-        }
-
-        .legal-tag { color: var(--accent); font-weight: bold; }
-    </style>
-</head>
-<body>
-<h1><a href="https://web3my.netlify.app">My Web3</a></h1>
-    <div class="header">
-        <h1>VIEWER 3x3</h1>
-        <p>Индивидуальная настройка мульти-потока</p>
-    </div>
-
-    <div class="grid-container" id="grid"></div>
-
-    <footer class="footer-legal">
-        <p><span class="legal-tag">Правовой статус:</span> Данный ресурс является инструментом визуализации и работает на основе стандартного API встраивания (Embedding). На текущий момент (2026 г.) использование данного функционала для личного просмотра полностью соответствует международному законодательству о добросовестном использовании (Fair Use). Каждый пользователь имеет право беспрепятственно использовать данный интерфейс для организации рабочего пространства и мониторинга видео-потоков.</p>
-        
-        <p><span class="legal-tag">Политика конфиденциальности:</span> Мы уважаем вашу приватность. 
-        1. Сайт <b>не собирает</b>, не хранит и не передает третьим лицам ваши персональные данные, IP-адреса или историю просмотров. 
-        2. Все ссылки на видео сохраняются исключительно в вашем браузере (через LocalStorage) и не покидают вашего устройства. 
-        3. Мы не используем файлы Cookies для отслеживания.</p>
-    </footer>
-
-    <script>
-        const grid = document.getElementById('grid');
-        let savedVideos = JSON.parse(localStorage.getItem('multiview-data')) || {};
-
-        function render() {
-            grid.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'video-slot';
-                
-                if (savedVideos[i]) {
-                    slot.innerHTML = `
-                        <button class="remove-btn" onclick="remove(${i})">Удалить</button>
-                        <iframe src="https://www.youtube.com/embed/${savedVideos[i]}" allowfullscreen></iframe>
-                    `;
-                } else {
-                    slot.innerHTML = `<button class="add-btn" onclick="add(${i})">+</button>`;
-                }
-                grid.appendChild(slot);
-            }
-        }
-
-        window.add = (i) => {
-            const url = prompt("Вставьте ссылку на YouTube:");
-            if (!url) return;
-            const id = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=))([\w\-]{11})/);
-            if (id) {
-                savedVideos[i] = id[1];
-                localStorage.setItem('multiview-data', JSON.stringify(savedVideos));
-                render();
-            }
-        };
-
-        window.remove = (i) => {
-            delete savedVideos[i];
-            localStorage.setItem('multiview-data', JSON.stringify(savedVideos));
-            render();
-        };
-
-        render();
-    </script>
-</body>
-</html>
-
